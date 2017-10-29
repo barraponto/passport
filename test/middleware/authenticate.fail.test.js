@@ -153,7 +153,46 @@ describe('middleware/authenticate', function() {
       expect(response.body).to.equal('Forbidden');
     });
   });
-  
+
+  describe('fail without challenge on XMLHttpRequest', function() {
+    function Strategy() {
+    }
+    Strategy.prototype.authenticate = function(req) {
+      this.fail('MOCK challenge');
+    };
+    
+    var passport = new Passport();
+    passport.use('fail', new Strategy());
+    
+    var request, response;
+
+    before(function(done) {
+      chai.connect.use(authenticate(passport, 'fail'))
+        .req(function(req) {
+          request = req;
+          req.xhr = true;
+        })
+        .end(function(res) {
+          response = res;
+          done();
+        })
+        .dispatch();
+    });
+    
+    it('should not set user', function() {
+      expect(request.user).to.be.undefined;
+    });
+    
+    it('should respond', function() {
+      expect(response.statusCode).to.equal(401);
+      expect(response.body).to.equal('Unauthorized');
+    });
+    
+    it('should not set authenticate header on response', function() {
+      expect(response.getHeader('WWW-Authenticate')).to.be.undefined;
+    });
+  });
+
   describe('fail with status', function() {
     function Strategy() {
     }
